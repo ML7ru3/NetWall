@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36518.9
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FireNetCSharp", ".\FireNetCore\FireNetCSharp.csproj", "{B65C0E6E-3F7B-41F9-8AEB-A9B9F8A3B72F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FirewallController", ".\FirewallController\FirewallController.csproj", "{159BCEBA-1055-4661-B882-B5123DF0AFA9}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B65C0E6E-3F7B-41F9-8AEB-A9B9F8A3B72F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B65C0E6E-3F7B-41F9-8AEB-A9B9F8A3B72F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B65C0E6E-3F7B-41F9-8AEB-A9B9F8A3B72F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B65C0E6E-3F7B-41F9-8AEB-A9B9F8A3B72F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{159BCEBA-1055-4661-B882-B5123DF0AFA9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{159BCEBA-1055-4661-B882-B5123DF0AFA9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{159BCEBA-1055-4661-B882-B5123DF0AFA9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{159BCEBA-1055-4661-B882-B5123DF0AFA9}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {50CB8B26-98DA-4AB5-88CB-364479540C7F}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,6 @@
+@FirewallController_HostAddress = http://localhost:5000
+
+GET {{FirewallController_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
