@@ -2,6 +2,14 @@
 
 namespace FirewallController.Model
 {
+    /// <summary>
+    /// Job model 
+    /// contains: 
+    ///     jobId 
+    ///     action 
+    ///     rules[] 
+    ///     rollbackOnFailure
+    /// </summary>
     public class Job
     {
         public string JobId { get; set; } = default!;

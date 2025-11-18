@@ -16,8 +16,11 @@ namespace FireNetCSharp
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
+            IFirewallService firewallService = new FirewallService();
             IDeviceService deviceService = new DeviceService();
-            
+
+            firewallService.Start();
+
             Application.Run(new Main(deviceService));
         }
     }

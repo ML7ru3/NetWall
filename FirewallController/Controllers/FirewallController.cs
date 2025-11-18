@@ -8,8 +8,8 @@ namespace FirewallController.Controllers
     {
         public record JobRequest(string AgentId, string? Action, Rule[]? Rules, bool? RollbackOnFailure);
 
-        private ConcurrentDictionary<string, ConcurrentQueue<Job>> _jobQueue = new ConcurrentDictionary<string, ConcurrentQueue<Job>>();
-        private ConcurrentDictionary<string, JobResult> _jobResults = new ConcurrentDictionary<string, JobResult>();
+        private static ConcurrentDictionary<string, ConcurrentQueue<Job>> _jobQueue = new ConcurrentDictionary<string, ConcurrentQueue<Job>>();
+        private static ConcurrentDictionary<string, JobResult> _jobResults = new ConcurrentDictionary<string, JobResult>();
 
         /// <summary>
         /// create a new job for an agent   
