@@ -4,6 +4,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
@@ -19,6 +20,7 @@ namespace FireNetCSharp.Controller
         private readonly string _agentId = Environment.GetEnvironmentVariable("FIREWALL_AGENT_ID") ?? "agent-01";
         private readonly int _pollIntervalSeconds = int.TryParse(Environment.GetEnvironmentVariable("FIREWALL_POLL_INTERVAL_SECONDS"), out var interval) ? interval : 30;
 
+        private const string HOST_FILE_PATH = @"C:\\Windows\\System32\\drivers\\etc\\hosts";
 
         /// <summary>
         /// Start curling job on the server every poll interval seconds
@@ -39,21 +41,26 @@ namespace FireNetCSharp.Controller
                             payload,
                             new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                         );
-
                         foreach (var job in data.Jobs)
                         {
                             Console.WriteLine($"Received job {job.JobId} action={job.Action}");
-                            if (job.Action == "apply-rules")
-                            {
-                                var (success, message) = await ApplyRulesAtomic(job.Rules ?? Array.Empty<Rule>(), job.RollbackOnFailure);
-                                var result = new JobResult { JobId = job.JobId, Success = success, Message = message };
-                                
-                                var json = JsonSerializer.Serialize(result);
-                                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                            var (success, message) = await ApplyRulesAtomic(job.Rules ?? Array.Empty<Rule>(), job.RollbackOnFailure);
+                            var result = new JobResult { JobId = job.JobId, Success = success, Message = message };
 
-                                await _http.PostAsync($"{_server.TrimEnd('/')}/agent/result", content);
-                                
-                                Console.WriteLine($"Reported job {job.JobId} -> success={success} message={message}");
+                            var json = JsonSerializer.Serialize(result);
+                            var content = new StringContent(json, Encoding.UTF8, "application/json");
+                            await _http.PostAsync($"{_server.TrimEnd('/')}/agent/result", content);
+                            
+                            switch (job.Action)
+                            {
+                                case "apply-rules":
+
+                                    Console.WriteLine($"Reported job {job.JobId} -> success={success} message=Applied rule in job {job.JobId}");
+                                    break;
+
+                                case "block-domain":
+                                    Console.WriteLine($"Reported job {job.JobId} -> success={success} message=Blocked domain in job {job.JobId}");
+                                    break;
                             }
                         }
                     }
@@ -69,7 +76,7 @@ namespace FireNetCSharp.Controller
 
 
         /// <summary>
-        /// apply rules for windows automatically with rollback support
+        /// Apply rules (or block domain) for windows automatically with rollback support
         /// </summary>
         /// <param name="rules"></param>
         /// <param name="rollbackOnFailure"></param>
@@ -80,7 +87,6 @@ namespace FireNetCSharp.Controller
 
             if (!isWindows)
                 return (false, "Unsupported OS");
-
             var snapshotPath = Path.Combine(Path.GetTempPath(), $"fw_snapshot_{Guid.NewGuid():N}.rules");
 
             try
@@ -89,18 +95,27 @@ namespace FireNetCSharp.Controller
                 var exportArgs = $"advfirewall export \"{snapshotPath}\"";
                 var ok = RunProcess("netsh", exportArgs, out var outp, out var err);
                 if (!ok) return (false, $"failed to export firewall: {err}");
-                
 
                 // apply each rule
                 foreach (var r in rules)
                 {
-                    if (!ValidateRule(r, out var reason)) throw new Exception($"invalid rule: {reason}");
+                    // TODO: Fix rule validattion later
                     bool applied;
-                    
-                    // windows: use netsh advfirewall or powershell. Use netsh advfirewall firewall add rule ...
-                    var args = BuildNetshArgs(r);
-                    applied = RunProcess("netsh", args, out var cout, out var cerr);
-                    if (!applied) throw new Exception($"netsh failed: {cerr}");
+
+                    if (string.IsNullOrEmpty(r.Domain))
+                    {
+                        // windows: use netsh advfirewall or powershell. Use netsh advfirewall firewall add rule ...
+                        if (!ValidateRule(r, out var reason)) throw new Exception($"invalid rule: {reason}"); // simple validation
+                        var args = BuildNetshArgs(r);
+                        applied = RunProcess("netsh", args, out var cout, out var cerr);
+                        if (!applied) throw new Exception($"netsh failed: {cerr}");
+                    }
+                    else
+                    {
+                        applied = ChangeHostFile(r.Domain);
+                        if (!applied) throw new Exception($"There's a problem when trying to add content to host file. Try run as admin.");
+
+                    }
                 }
 
                 return (true, "applied");
@@ -128,7 +143,14 @@ namespace FireNetCSharp.Controller
             }
         }
 
-
+        /// <summary>
+        /// Run a process and capture stdout and stderr
+        /// </summary>
+        /// <param name="fileName"></param>
+        /// <param name="arguments"></param>
+        /// <param name="stdout"></param>
+        /// <param name="stderr"></param>
+        /// <returns></returns>
         private bool RunProcess(string fileName, string arguments, out string stdout, out string stderr)
         {
             stdout = ""; stderr = "";
@@ -156,6 +178,32 @@ namespace FireNetCSharp.Controller
             }
         }
 
+        /// <summary>
+        /// Change host file in windows for 
+        /// mapping from this domain to 0.0.0.0 
+        /// => can not connect
+        /// </summary>
+        /// <param name="domain"></param>
+        /// <returns></returns>
+        private bool ChangeHostFile(string domain)
+        {
+            try
+            {
+                using (StreamWriter sw = new StreamWriter(HOST_FILE_PATH, true))
+                {
+                    sw.WriteLine($"0.0.0.0 {domain}");
+
+                }
+                return true;
+            }
+            catch { return false; }
+        }
+
+        /// <summary>
+        /// Build netsh advfirewall arguments from Rule
+        /// </summary>
+        /// <param name="r"></param>
+        /// <returns></returns>
         private string BuildNetshArgs(Rule r)
         {
             var name = $"FromAgent-{Guid.NewGuid():N}";
@@ -191,6 +239,12 @@ namespace FireNetCSharp.Controller
             return args;
         }
 
+        /// <summary>
+        /// Rule validation for firewall
+        /// </summary>
+        /// <param name="r"></param>
+        /// <param name="reason"></param>
+        /// <returns></returns>
         private bool ValidateRule(Rule r, out string reason)
         {
             if (string.IsNullOrWhiteSpace(r.Chain)) { reason = "chain empty"; return false; }

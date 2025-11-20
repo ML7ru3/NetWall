@@ -10,5 +10,6 @@
         public string? Src { get; set; }
         public string? Dst { get; set; }
         public string? Target { get; set; } // ACCEPT, DROP
+        public string? Domain { get; set; }
     }
 }
