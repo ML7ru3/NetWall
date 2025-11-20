@@ -43,7 +43,7 @@ namespace FireNetCSharp.Controller
                         foreach (var job in data.Jobs)
                         {
                             Console.WriteLine($"Received job {job.JobId} action={job.Action}");
-                            if (job.Action == "apply_rules")
+                            if (job.Action == "apply-rules")
                             {
                                 var (success, message) = await ApplyRulesAtomic(job.Rules ?? Array.Empty<Rule>(), job.RollbackOnFailure);
                                 var result = new JobResult { JobId = job.JobId, Success = success, Message = message };
@@ -158,14 +158,36 @@ namespace FireNetCSharp.Controller
 
         private string BuildNetshArgs(Rule r)
         {
-            // Example: advfirewall firewall add rule name="FromAgent-<guid>" dir=in action=allow protocol=TCP localport=22 remoteip=1.2.3.4
             var name = $"FromAgent-{Guid.NewGuid():N}";
-            var dir = "in";
-            var action = (r.Target?.ToUpperInvariant() == "ACCEPT" || r.Target?.ToUpperInvariant() == "ALLOW") ? "allow" : "block";
-            var proto = r.Protocol?.ToUpperInvariant() ?? "ANY";
-            var localport = r.Dport.HasValue ? $" localport={r.Dport.Value}" : "";
-            var remoteip = !string.IsNullOrWhiteSpace(r.Src) ? $" remoteip={r.Src}" : "";
-            var args = $"advfirewall firewall add rule name=\"{name}\" dir={dir} action={action} protocol={proto}{localport}{remoteip}";
+
+            // Map chain → direction
+            var dir = r.Chain?.ToLowerInvariant() switch
+            {
+                "input" => "in",
+                "in" => "in",
+                "output" => "out",
+                "out" => "out",
+                _ => "out"
+            };
+
+            var action = r.Target?.ToUpperInvariant() == "ACCEPT" ||
+                         r.Target?.ToUpperInvariant() == "ALLOW"
+                         ? "allow"
+                         : "block";
+
+            var proto = r.Protocol?.ToUpper() ?? "ANY";
+
+            // outbound traffic: remote port = dport
+            var remoteport = r.Dport.HasValue ? $" remoteport={r.Dport}" : "";
+
+            // block destination IP → remoteip
+            var remoteip = !string.IsNullOrWhiteSpace(r.Dst)
+                ? $" remoteip={r.Dst}"
+                : "";
+
+            var args =
+                $"advfirewall firewall add rule name=\"{name}\" dir={dir} action={action} protocol={proto}{remoteport}{remoteip}";
+
             return args;
         }
 
