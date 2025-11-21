@@ -15,7 +15,7 @@ Description: Write DateTime when done a task.
     - [x] Display to a graph.
 
 ## Firewall
-- **FEATURE** [ ] Firewall integrated.
+- **FEATURE** [x] Firewall integrated. ***(20/11/2025)***
 
 # 10/11/2025
 - **FEATURE (CONFIRMING -> DELAYED)** [ ] List all application that using network and their download/upload speed when hover the speed graph. **(VERY HARD)**
@@ -43,6 +43,21 @@ Change of purpose: "personal network monitor" in this context is your network de
 - Deploy an web server that contains all the firewall rules.
 - When the app starts, it will connect to that web server to get all the firewall rules.
 - Apply those rules to the local machine.
+
+# 21/11/2025
+
+## Purpose now:
+
+Make an web app for the server and minimalism for the app.
+
+Still code in C#.
+
+## Feature 
+
+- [] **FEATURE** Add log to the server so it can track all the activity in that computer
+    - The server can see that this computer trying to access to blacklist domain.
+- [] **FEATURE** Make an web app for the server for easier inspection
+- [] **FEATURE** Make *heartbeat* to the app so that server knows that that computer is still active
 
 # FINAL RELEASE
 - [ ] Make an installer for windows.
